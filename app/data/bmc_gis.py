@@ -75,9 +75,9 @@ async def query_layer(
         params["inSR"] = str(in_sr)
 
     last_error: Exception | None = None
-    for attempt in range(3):
+    for attempt in range(2):
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.get(url, params=params)
 
             if response.status_code == 404:
