@@ -52,7 +52,7 @@ RAIN_RESPONSE_MIN = 3.0
 RAIN_RESPONSE_MAX = 22.0
 
 # Page size used when paginating BMC ArcGIS layers.
-GIS_PAGE_SIZE = 1000
+GIS_PAGE_SIZE = 100
 
 # How long the fetched-from-BMC structural graph (positions, connectivity,
 # seeded capacity/base-flow/rain-response) stays cached before being
@@ -186,11 +186,21 @@ async def _build_structural_graph() -> tuple[list[dict], list[dict]]:
     simulated_flow/utilization/status, which build_drainage_graph()
     computes cheaply on top of this on every call.
     """
+    
     manhole_features, drain_features = await asyncio.gather(
-        _fetch_all_features("storm_water_manholes"),
-        _fetch_all_features("storm_water_drains", max_allowable_offset=0.00005),
-        return_exceptions=True,
-    )
+    _fetch_all_features(
+        "storm_water_manholes",
+        page_size=100,
+        out_fields="OBJECTID,NODE_ID",
+    ),
+    _fetch_all_features(
+        "storm_water_drains",
+        page_size=100,
+        out_fields="OBJECTID,US_NODE_ID,DS_NODE_ID",
+        max_allowable_offset=0.00005,
+    ),
+    return_exceptions=True,
+)
     # if isinstance(manhole_features, BaseException):
     #     manhole_features = []
     # if isinstance(drain_features, BaseException):
