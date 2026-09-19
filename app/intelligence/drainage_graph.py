@@ -52,7 +52,7 @@ RAIN_RESPONSE_MIN = 3.0
 RAIN_RESPONSE_MAX = 22.0
 
 # Page size used when paginating BMC ArcGIS layers.
-GIS_PAGE_SIZE = 100
+GIS_PAGE_SIZE = 10
 
 # How long the fetched-from-BMC structural graph (positions, connectivity,
 # seeded capacity/base-flow/rain-response) stays cached before being
@@ -190,16 +190,15 @@ async def _build_structural_graph() -> tuple[list[dict], list[dict]]:
     bmc_gis.query_layer(
         "storm_water_manholes",
         out_fields="OBJECTID,NODE_ID",
-        result_record_count=100,
+        result_record_count=10,
     ),
     bmc_gis.query_layer(
         "storm_water_drains",
         out_fields="OBJECTID,US_NODE_ID,DS_NODE_ID",
-        result_record_count=100,
-        max_allowable_offset=0.00005,
+        result_record_count=10,
     ),
     return_exceptions=True,
-)
+    )
 
     if isinstance(manhole_features, BaseException):
         print(f"[DRAINAGE GRAPH] Manhole query failed: {manhole_features}")
