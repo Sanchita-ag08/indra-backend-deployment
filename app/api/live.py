@@ -35,7 +35,6 @@ async def gis():
             return await fetcher()
         except Exception as exc:
             print(f"[GIS] Layer unavailable: {exc}")
-            return empty_feature_collection(str(exc))
 
     drains = await safe_fetch(
         bmc_gis.get_storm_water_drains
