@@ -186,32 +186,34 @@ async def _build_structural_graph() -> tuple[list[dict], list[dict]]:
     simulated_flow/utilization/status, which build_drainage_graph()
     computes cheaply on top of this on every call.
     """
-    
     manhole_features, drain_features = await asyncio.gather(
-    _fetch_all_features(
+    bmc_gis.query_layer(
         "storm_water_manholes",
-        page_size=100,
         out_fields="OBJECTID,NODE_ID",
+        result_record_count=100,
     ),
-    _fetch_all_features(
+    bmc_gis.query_layer(
         "storm_water_drains",
-        page_size=100,
         out_fields="OBJECTID,US_NODE_ID,DS_NODE_ID",
+        result_record_count=100,
         max_allowable_offset=0.00005,
     ),
     return_exceptions=True,
 )
-    # if isinstance(manhole_features, BaseException):
-    #     manhole_features = []
-    # if isinstance(drain_features, BaseException):
-    #     drain_features = []
+
     if isinstance(manhole_features, BaseException):
         print(f"[DRAINAGE GRAPH] Manhole query failed: {manhole_features}")
-        manhole_features = []
+        manhole_features = {"features": []}
 
     if isinstance(drain_features, BaseException):
         print(f"[DRAINAGE GRAPH] Drain query failed: {drain_features}")
-        drain_features = []
+        drain_features = {"features": []}
+
+    manhole_features = manhole_features.get("features", [])
+    drain_features = drain_features.get("features", [])
+    
+
+    
     nodes: list[dict[str, Any]] = []
     for i, feature in enumerate(manhole_features):
         pt = _point_coords(feature)
