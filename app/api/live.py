@@ -10,84 +10,67 @@ from app.db.session import get_db
 from app.intelligence.drainage_graph import build_drainage_graph
 
 router = APIRouter(prefix="/live", tags=["live"])
+def empty_feature_collection(error: str | None = None):
+    result = {
+        "type": "FeatureCollection",
+        "features": [],
+        "_available": False,
+    }
 
+    if error:
+        result["_error"] = error
+
+    return result
 
 @router.get("/gis")
 async def gis():
     """
     Live BMC/MCGM GIS data.
 
-    Core drainage layers are required:
-      - Storm Water Drains
-      - Storm Water Manholes
-
-    Auxiliary layers are optional:
-      - Flooding Spots
-      - Flow Level Sensors
-      - Wards
-      - Mumbai Contour
+    Core and optional layers fail gracefully if BMC GIS is unavailable.
     """
 
-    try:
-        # ---------------------------------------------------------
-        # REQUIRED: actual BMC drainage infrastructure
-        # ---------------------------------------------------------
-        drains = await bmc_gis.get_storm_water_drains()
-        manholes = await bmc_gis.get_storm_water_manholes()
+    async def safe_fetch(fetcher):
+        try:
+            return await fetcher()
+        except Exception as exc:
+            print(f"[GIS] Layer unavailable: {exc}")
+            return empty_feature_collection(str(exc))
 
-        # ---------------------------------------------------------
-        # OPTIONAL: other BMC GIS layers
-        # ---------------------------------------------------------
-        async def optional(fetcher):
-            try:
-                return await fetcher()
-            except Exception as exc:
-                return {
-                    "type": "FeatureCollection",
-                    "features": [],
-                    "_available": False,
-                    "_error": str(exc),
-                }
+    drains = await safe_fetch(
+        bmc_gis.get_storm_water_drains
+    )
 
-        flooding_spots = await optional(
-            bmc_gis.get_flooding_spots
-        )
+    manholes = await safe_fetch(
+        bmc_gis.get_storm_water_manholes
+    )
 
-        flow_level_sensors = await optional(
-            bmc_gis.get_flow_level_sensors
-        )
+    flooding_spots = await safe_fetch(
+        bmc_gis.get_flooding_spots
+    )
 
-        wards = await optional(
-            bmc_gis.get_wards
-        )
+    flow_level_sensors = await safe_fetch(
+        bmc_gis.get_flow_level_sensors
+    )
 
-        contours = await optional(
-            bmc_gis.get_mumbai_contour
-        )
+    wards = await safe_fetch(
+        bmc_gis.get_wards
+    )
 
-        return {
-            "source": "MCGM/BMC Official GIS",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+    contours = await safe_fetch(
+        bmc_gis.get_mumbai_contour
+    )
 
-            # Core infrastructure
-            "storm_water_drains": drains,
-            "storm_water_manholes": manholes,
-
-            # Optional operational/context layers
-            "flooding_spots": flooding_spots,
-            "flow_level_sensors": flow_level_sensors,
-            "wards": wards,
-            "contours": contours,
-        }
-
-    except Exception as exc:
-        # If actual drainage layers themselves fail,
-        # the endpoint should correctly report failure.
-        raise HTTPException(
-            status_code=502,
-            detail=f"BMC drainage GIS unavailable: {exc}",
-        )
-
+    return {
+        "source": "MCGM/BMC Official GIS",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "storm_water_drains": drains,
+        "storm_water_manholes": manholes,
+        "flooding_spots": flooding_spots,
+        "flow_level_sensors": flow_level_sensors,
+        "wards": wards,
+        "contours": contours,
+    }
 
 @router.get("/drainage-graph")
 async def drainage_graph(db: Session = Depends(get_db)):
