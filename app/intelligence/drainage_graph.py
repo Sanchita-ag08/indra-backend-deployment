@@ -191,11 +191,17 @@ async def _build_structural_graph() -> tuple[list[dict], list[dict]]:
         _fetch_all_features("storm_water_drains", max_allowable_offset=0.00005),
         return_exceptions=True,
     )
+    # if isinstance(manhole_features, BaseException):
+    #     manhole_features = []
+    # if isinstance(drain_features, BaseException):
+    #     drain_features = []
     if isinstance(manhole_features, BaseException):
+        print(f"[DRAINAGE GRAPH] Manhole query failed: {manhole_features}")
         manhole_features = []
-    if isinstance(drain_features, BaseException):
-        drain_features = []
 
+    if isinstance(drain_features, BaseException):
+        print(f"[DRAINAGE GRAPH] Drain query failed: {drain_features}")
+        drain_features = []
     nodes: list[dict[str, Any]] = []
     for i, feature in enumerate(manhole_features):
         pt = _point_coords(feature)
